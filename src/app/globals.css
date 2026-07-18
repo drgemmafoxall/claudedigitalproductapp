@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+/* Doctor Gemma brand — mirrors src/lib/brand/tokens.ts (single source of truth). */
+:root {
+  --sage: #81B29A;
+  --forest: #6A9B84;
+  --cream: #FDFBF7;
+  --ink: #2D3748;
+  --slate: #4A5568;
+  --light-slate: #6B7280;
+  --card: #FFFFFF;
+  --card-border: #EDEDE8;
+  --cta: #F4A62A;
+  --cta-urgent: #C1440E;
+  --gradient: linear-gradient(90deg, #FFADAD, #FFD6A5, #FFE66D, #A8DADC, #DDA0DD, #E0F7FA, #E8E4F3);
+}
+
+@theme inline {
+  --color-sage: var(--sage);
+  --color-forest: var(--forest);
+  --color-cream: var(--cream);
+  --color-ink: var(--ink);
+  --color-slate: var(--slate);
+  --color-lightslate: var(--light-slate);
+  --color-card: var(--card);
+  --color-cardborder: var(--card-border);
+  --color-cta: var(--cta);
+  --color-ctaurgent: var(--cta-urgent);
+  --font-heading: 'Nunito', sans-serif;
+  --font-body: 'Inter', sans-serif;
+}
+
+body {
+  background: var(--cream);
+  color: var(--slate);
+  font-family: 'Inter', sans-serif;
+  font-size: 16px; /* brand floor */
+  line-height: 1.55;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Nunito', sans-serif;
+  color: var(--ink);
+}
+
+.brand-underline {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--gradient);
+}
+
+/* 5 Ts: tender/smooth transitions */
+button, a, input, textarea, select {
+  transition: all 160ms ease;
+}
