@@ -28,10 +28,13 @@ async function launchBrowser() {
  */
 export async function POST(req: NextRequest) {
   try {
-    const { content, audience, html: providedHtml, format = 'pdf' } = await req.json();
+    const { content, audience, html: providedHtml, format = 'pdf', kind = 'document' } = await req.json();
     const audienceLabel = audiences.find((a) => a.id === audience)?.label;
     const html: string =
-      providedHtml ?? renderDocumentHtml(content as RenderContent, audienceLabel);
+      providedHtml ??
+      (kind === 'ebook'
+        ? (await import('@/lib/render/templates/ebook')).renderEbookHtml(content, audienceLabel)
+        : renderDocumentHtml(content as RenderContent, audienceLabel));
 
     if (format === 'html') {
       return new NextResponse(html, { headers: { 'Content-Type': 'text/html' } });

@@ -7,6 +7,24 @@ import { audiences, fixedElements } from '@/lib/brand/tokens';
 export const runtime = 'nodejs';
 export const maxDuration = 120;
 
+/** JSON output schema varies by renderer. */
+function schemaFor(renderer: string): string {
+  switch (renderer) {
+    case 'ebook':
+      return '{ "title": string, "subtitle": string?, "introduction": string, "chapters": [{ "title": string, "sections": [{ "heading": string?, "body": string }], "summary": string? }], "conclusion": string, "aboutCta": string, "meta": { "needsGemma": string[] } }';
+    case 'course-pack':
+      return '{ "title": string, "promise": string, "modules": [{ "title": string, "lessons": [{ "title": string, "objective": string, "content": string, "activity": string, "keyTakeaway": string }], "quiz": [{ "question": string, "options": string[], "answerIndex": number }] }], "workbookSpec": string, "optInCopy": { "headline": string, "benefits": string[], "cta": string }, "meta": { "needsGemma": string[] } }';
+    case 'prompt-kit-suno':
+      return '{ "trackTitle": string, "stylePrompt": string, "lyricsOrScript": string?, "description": string, "usageNotes": string, "meta": { "needsGemma": string[] } }';
+    case 'prompt-kit-magiclight':
+      return '{ "videoTitle": string, "logline": string, "styleNotes": string, "scenes": [{ "narration": string, "visualDirection": string }], "endCardCta": string, "meta": { "needsGemma": string[] } }';
+    case 'vizard-clips':
+      return '{ "projectName": string, "platforms": string[], "preferLength": string, "captionStyle": string, "keyMoments": string[], "suggestedTitles": string[], "meta": { "needsGemma": string[] } }';
+    default:
+      return '{ "title": string, "subtitle": string?, "sections": [{ "heading": string, "kind": "text"|"list"|"check"|"numbered"|"scenario"|"exercise"|"table"|"quote", "body": string, "items": string[]? }], "guidingPrinciple": string?, "cta": string, "caption": string?, "meta": { "needsGemma": string[] } }';
+  }
+}
+
 /**
  * POST /api/generate
  * Body: { brief: string, productId: string, audience: AudienceId, notes?: string }
@@ -35,7 +53,7 @@ export async function POST(req: NextRequest) {
       `AUDIENCE: ${audienceLabel} — use that register.`,
       '',
       'Return ONLY a JSON object with this shape:',
-      '{ "title": string, "subtitle": string?, "sections": [{ "heading": string, "kind": "text"|"list"|"check"|"numbered"|"scenario"|"exercise"|"table"|"quote", "body": string, "items": string[]? }], "guidingPrinciple": string?, "cta": string, "caption": string?, "meta": { "needsGemma": string[] } }',
+      schemaFor(product.renderer),
       'Put every [NEEDS GEMMA] gap into meta.needsGemma as well as inline.',
       `The renderer adds the fixed footer ("${fixedElements.footer}") and disclaimer automatically — do not include them.`,
       '',

@@ -320,7 +320,37 @@ export default function CreateWizard() {
         </section>
       )}
 
-      {step === 'review' && content && (
+      {step === 'review' && content && !content.sections && (
+        <section className="rounded-2xl bg-card border border-cardborder p-6 space-y-4">
+          <h1 className="text-2xl font-extrabold">Review before it ships</h1>
+          <p className="text-sm">
+            This product type has its own structure — here’s everything that was generated.
+            Copy it, or download it as a file to use with the target platform.
+          </p>
+          <pre className="rounded-xl border border-cardborder bg-cream p-4 text-xs overflow-auto max-h-[60vh] whitespace-pre-wrap">
+            {JSON.stringify(content, null, 2)}
+          </pre>
+          <div className="flex justify-between items-center">
+            <button onClick={() => setStep('select')} className="text-sm text-lightslate hover:text-ink">
+              Back
+            </button>
+            <button
+              onClick={() => {
+                const blob = new Blob([JSON.stringify(content, null, 2)], { type: 'application/json' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `${productId}.json`;
+                a.click();
+              }}
+              className="rounded-full bg-cta text-ink font-heading font-bold px-6 py-2"
+            >
+              Download
+            </button>
+          </div>
+        </section>
+      )}
+
+      {step === 'review' && content && content.sections && (
         <section className="rounded-2xl bg-card border border-cardborder p-6 space-y-4">
           <h1 className="text-2xl font-extrabold">Review before it ships</h1>
           {content.meta?.needsGemma?.length ? (
