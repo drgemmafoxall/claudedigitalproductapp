@@ -1,4 +1,5 @@
 import { colors, pastels, gradient, fixedElements, textOn } from '@/lib/brand/tokens';
+import { EMBEDDED_FONTS_CSS } from '@/lib/render/embedded-fonts';
 
 export interface RenderSection {
   heading: string;
@@ -66,7 +67,7 @@ export function renderDocumentHtml(content: RenderContent, audienceLabel?: strin
 
   return `<!doctype html><html><head><meta charset="utf-8">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+  ${EMBEDDED_FONTS_CSS}
   @page { size: A4; margin: 0; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Inter', sans-serif; background: ${colors.cream}; color: ${colors.slate};

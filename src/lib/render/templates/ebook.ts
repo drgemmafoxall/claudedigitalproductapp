@@ -1,4 +1,5 @@
 import { colors, gradient, fixedElements } from '@/lib/brand/tokens';
+import { EMBEDDED_FONTS_CSS } from '@/lib/render/embedded-fonts';
 
 export interface EbookChapter {
   title: string;
@@ -52,6 +53,7 @@ export function renderEbookHtml(book: EbookContent, audienceLabel?: string): str
 
   return `<!doctype html><html><head><meta charset="utf-8">
 <style>
+  ${EMBEDDED_FONTS_CSS}
   @page { size: A4; margin: 0; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Inter', sans-serif; color: ${colors.slate}; font-size: 10.5pt; line-height: 1.6; }
