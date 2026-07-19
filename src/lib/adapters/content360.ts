@@ -1,43 +1,70 @@
 /**
- * Content360 adapter — no public API, so the integration is a bulk-upload CSV
- * maintained as a content calendar (Google Sheet / Drive). A scheduled task
- * (or Claude in Chrome) performs the upload run.
- *
- * NOTE: column spec below is a sensible default — replace with the exact
- * columns from Content360's bulk upload screen once Gemma exports a sample.
+ * Content360 adapter — no public API; integration is their bulk-upload CSV.
+ * Column spec matches Gemma's real template (Content360postACASpreadsheet /
+ * os_bulk_template, verified 19 Jul 2026):
+ *   Text | Year | Month (1 to 12) | Date | Hour (From 0 to 23) | Minutes |
+ *   Post Type (Post, Story, Reel) | Media URL (.mp4 recommended for videos) |
+ *   No. of Repetitions (From 1-100) | Time Gap between Repetitions (DAILY,
+ *   WEEKLY, MONTHLY OR YEARLY) | Pinterest Title | Pinterest Link
  */
 
+export type PostType = 'Post' | 'Story' | 'Reel';
+export type RepetitionGap = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+
 export interface ScheduledPost {
-  date: string; // YYYY-MM-DD
-  time: string; // HH:mm (user's timezone)
-  platforms: string[]; // e.g. ['instagram', 'facebook', 'linkedin']
   text: string; // caption / post text
-  mediaUrl?: string; // public URL of PNG/MP4 (Supabase Storage / Drive)
-  firstComment?: string;
-  link?: string;
+  date: string; // YYYY-MM-DD (local)
+  time: string; // HH:mm
+  postType?: PostType; // default 'Post'
+  mediaUrl?: string; // public URL (.mp4 recommended for videos)
+  repetitions?: number; // 1–100, default 1
+  repetitionGap?: RepetitionGap; // required by Content360 when repetitions > 1
+  pinterestTitle?: string;
+  pinterestLink?: string;
 }
 
-const CSV_COLUMNS = ['date', 'time', 'platforms', 'text', 'media_url', 'first_comment', 'link'];
+const HEADER = [
+  'Text',
+  'Year',
+  'Month (1 to 12)',
+  'Date',
+  'Hour (From 0 to 23)',
+  'Minutes',
+  'Post Type (Post, Story, Reel)',
+  'Media URL (.mp4 recommended for videos)',
+  'No. of Repetitions (From 1-100)',
+  'Time Gap between Repetitions (DAILY, WEEKLY, MONTHLY OR YEARLY)',
+  'Pinterest Title',
+  'Pinterest Link',
+];
 
-function csvEscape(v: string): string {
-  return /[",\n]/.test(v) ? `"${v.replaceAll('"', '""')}"` : v;
+function csvEscape(v: string | number): string {
+  const s = String(v);
+  return /[",\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
 }
 
 export function buildContent360Csv(posts: ScheduledPost[]): string {
-  const rows = posts.map((p) =>
-    [
-      p.date,
-      p.time,
-      p.platforms.join('|'),
+  const rows = posts.map((p) => {
+    const [y, m, d] = p.date.split('-').map(Number);
+    const [hh, mm] = p.time.split(':').map(Number);
+    return [
       p.text,
+      y,
+      m,
+      d,
+      hh,
+      mm,
+      p.postType ?? 'Post',
       p.mediaUrl ?? '',
-      p.firstComment ?? '',
-      p.link ?? '',
+      p.repetitions ?? 1,
+      p.repetitionGap ?? '',
+      p.pinterestTitle ?? '',
+      p.pinterestLink ?? '',
     ]
       .map(csvEscape)
-      .join(','),
-  );
-  return [CSV_COLUMNS.join(','), ...rows].join('\n');
+      .join(',');
+  });
+  return [HEADER.map(csvEscape).join(','), ...rows].join('\n');
 }
 
 /** Spread posts across a date range at a given cadence (posts per week). */

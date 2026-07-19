@@ -18,8 +18,9 @@ export async function POST(req: NextRequest) {
       const slots = suggestSchedule(body.texts.length, start, body.perWeek ?? 5);
       posts = body.texts.map((text: string, i: number) => ({
         ...slots[i],
-        platforms: body.platforms ?? ['instagram', 'facebook'],
         text,
+        postType: body.postType ?? 'Post',
+        mediaUrl: body.mediaUrl,
       }));
     }
     if (!posts.length) {
