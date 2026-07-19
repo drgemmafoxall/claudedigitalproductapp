@@ -84,7 +84,9 @@ export default function CreateWizard() {
   };
 
   const onFile = async (f: File) => {
-    if (f.type.startsWith('audio/')) return transcribe(f, f.name);
+    if (f.type.startsWith('audio/') || f.type.startsWith('video/')) {
+      return transcribe(f, f.name);
+    }
     const text = await f.text();
     setRawText((t) => (t ? `${t}\n\n${text}` : text));
   };
@@ -205,7 +207,7 @@ export default function CreateWizard() {
               Upload file
               <input
                 type="file"
-                accept=".txt,.md,audio/*"
+                accept=".txt,.md,audio/*,video/mp4,video/quicktime"
                 className="hidden"
                 onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
               />
