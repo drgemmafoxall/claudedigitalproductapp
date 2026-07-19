@@ -9,7 +9,7 @@ Rebuilt July 2026 from the bolt.new prototype per `Rebuild-Plan-July-2026.md` (p
 ## Stack
 
 Next.js (App Router) on Netlify · Supabase (auth/DB/storage) · Claude API (model-routed
-generation) · Whisper (transcription) · Puppeteer (HTML→PDF) · Canva Connect (social autofill) ·
+generation) · Gemini (transcription) · Puppeteer (HTML→PDF) · Canva Connect (social autofill) ·
 Vizard API (clips) · Systeme.io (courses) · Content360 via bulk CSV.
 
 ## Pipeline
