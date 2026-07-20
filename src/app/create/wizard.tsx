@@ -35,6 +35,8 @@ export default function CreateWizard() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageDriveUrl, setImageDriveUrl] = useState<string | null>(null);
   const [pdfDriveUrl, setPdfDriveUrl] = useState<string | null>(null);
+  const [savedRowId, setSavedRowId] = useState<string | null>(null);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
 
   const toggleAudience = (id: string) => {
     setAudienceIds((prev) => {
@@ -128,10 +130,43 @@ export default function CreateWizard() {
       const data = await api('/api/generate', { brief, productId, audiences: audienceIds, notes });
       setContent(data.content);
       setStep('review');
+      saveToLibrary(data.content);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Generation failed');
     } finally {
       setBusy(null);
+    }
+  };
+
+  /** Best-effort: persist the generated product to the Library. Never blocks the UI. */
+  const saveToLibrary = async (generatedContent: GeneratedContent) => {
+    try {
+      const data = await api('/api/library', {
+        title: generatedContent.title,
+        rawInput: rawText,
+        brief,
+        productId,
+        audience: audienceIds.join(', '),
+        content: generatedContent,
+      });
+      setSavedRowId(data.productRowId ?? null);
+      setSaveNotice('Saved to your Library');
+    } catch {
+      setSaveNotice('Could not save to Library (Supabase not configured yet) — your work is still safe on this screen.');
+    }
+  };
+
+  const updateLibraryRecord = async (updates: Partial<GeneratedContent>) => {
+    if (!savedRowId || !content) return;
+    try {
+      await api('/api/library', {
+        productId,
+        audience: audienceIds.join(', '),
+        content: { ...content, ...updates },
+        existingProductRowId: savedRowId,
+      });
+    } catch {
+      // best-effort only
     }
   };
 
@@ -150,6 +185,7 @@ export default function CreateWizard() {
       a.href = URL.createObjectURL(blob);
       a.download = `${content?.title ?? 'product'}.pdf`;
       a.click();
+      if (content) updateLibraryRecord(content);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Render failed');
     } finally {
@@ -169,6 +205,7 @@ export default function CreateWizard() {
       });
       setPdfDriveUrl(data.driveUrl);
       if (data.driveUrl) window.open(data.driveUrl, '_blank');
+      if (content) updateLibraryRecord(content);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Drive export failed');
     } finally {
@@ -241,6 +278,9 @@ export default function CreateWizard() {
         <div className="rounded-xl border border-sage bg-sage/10 text-ink p-4 text-sm animate-pulse">
           {busy}
         </div>
+      )}
+      {step === 'review' && saveNotice && (
+        <div className="text-xs text-lightslate">{saveNotice}</div>
       )}
 
       {step === 'capture' && (
