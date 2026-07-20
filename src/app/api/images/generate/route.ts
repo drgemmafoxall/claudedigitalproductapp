@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildImagePrompt, generateImage } from '@/lib/adapters/image-gen';
+import { uploadImageToDrive } from '@/lib/adapters/drive';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
@@ -45,6 +46,17 @@ export async function POST(req: NextRequest) {
       // Supabase not configured yet — fall back to returning the image inline below
     }
 
+    // Also push a copy straight into Gemma's Drive library, so every generated
+    // image lands somewhere she can browse/reuse without touching the app —
+    // best-effort: silently skipped if the Drive service account isn't configured.
+    let driveUrl: string | null = null;
+    try {
+      const drive = await uploadImageToDrive(bytes, filename, image.mimeType);
+      driveUrl = drive.webViewLink;
+    } catch {
+      // Drive integration not configured yet — not fatal, image is still returned/stored above
+    }
+
     if (projectId) {
       try {
         await supabaseAdmin()
@@ -54,7 +66,7 @@ export async function POST(req: NextRequest) {
             kind: 'generated-image',
             storage_path: path,
             public_url: publicUrl,
-            metadata: { subject, format, audience, model: 'gemini-image' },
+            metadata: { subject, format, audience, model: 'gemini-image', driveUrl },
           });
       } catch {
         // best-effort logging only
@@ -63,6 +75,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       publicUrl,
+      driveUrl,
       // Always include the base64 too, so the UI can preview even before Supabase is wired
       dataUrl: `data:${image.mimeType};base64,${image.base64}`,
       path,

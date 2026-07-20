@@ -33,6 +33,7 @@ export default function CreateWizard() {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageDriveUrl, setImageDriveUrl] = useState<string | null>(null);
 
   const api = async (url: string, body: unknown) => {
     const res = await fetch(url, {
@@ -155,6 +156,7 @@ export default function CreateWizard() {
         audience,
       });
       setImageUrl(data.publicUrl ?? data.dataUrl);
+      setImageDriveUrl(data.driveUrl ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Image generation failed');
     } finally {
@@ -454,6 +456,16 @@ export default function CreateWizard() {
                   alt="Generated brand illustration"
                   className="rounded-lg border border-cardborder max-w-xs"
                 />
+              )}
+              {imageDriveUrl && (
+                <a
+                  href={imageDriveUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block text-xs text-sage underline"
+                >
+                  Saved to your Drive library →
+                </a>
               )}
             </div>
           )}
