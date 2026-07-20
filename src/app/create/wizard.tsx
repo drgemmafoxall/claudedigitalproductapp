@@ -14,6 +14,7 @@ interface GeneratedContent {
   guidingPrinciple?: string;
   cta: string;
   caption?: string;
+  imageSubject?: string;
   meta?: { needsGemma?: string[] };
 }
 
@@ -31,6 +32,7 @@ export default function CreateWizard() {
   const [recording, setRecording] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const api = async (url: string, body: unknown) => {
     const res = await fetch(url, {
@@ -136,6 +138,25 @@ export default function CreateWizard() {
       a.click();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Render failed');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const generateImage = async () => {
+    if (!content?.imageSubject) return;
+    setBusy('Generating your illustration…');
+    setError(null);
+    try {
+      const format = productId.includes('story') ? 'story' : 'square';
+      const data = await api('/api/images/generate', {
+        subject: content.imageSubject,
+        format,
+        audience,
+      });
+      setImageUrl(data.publicUrl ?? data.dataUrl);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Image generation failed');
     } finally {
       setBusy(null);
     }
@@ -406,6 +427,34 @@ export default function CreateWizard() {
                 onChange={(e) => setContent({ ...content, caption: e.target.value })}
                 className="w-full text-sm bg-transparent focus:outline-none"
               />
+            </div>
+          )}
+          {content.imageSubject && (
+            <div className="rounded-xl border border-cardborder p-4 space-y-3">
+              <div className="text-xs uppercase tracking-wide text-lightslate">
+                Suggested illustration
+              </div>
+              <textarea
+                value={content.imageSubject}
+                rows={2}
+                onChange={(e) => setContent({ ...content, imageSubject: e.target.value })}
+                className="w-full text-sm rounded-lg border border-cardborder p-3 bg-cream focus:outline-none focus:border-sage"
+              />
+              <button
+                onClick={generateImage}
+                disabled={!!busy}
+                className="rounded-full border border-sage px-5 py-2 text-sm font-medium text-ink hover:bg-sage/10 disabled:opacity-40"
+              >
+                Generate image
+              </button>
+              {imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={imageUrl}
+                  alt="Generated brand illustration"
+                  className="rounded-lg border border-cardborder max-w-xs"
+                />
+              )}
             </div>
           )}
           <div className="flex flex-wrap gap-3 justify-between items-center pt-2">

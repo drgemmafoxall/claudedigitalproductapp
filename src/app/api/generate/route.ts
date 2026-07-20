@@ -21,9 +21,12 @@ function schemaFor(renderer: string): string {
     case 'vizard-clips':
       return '{ "projectName": string, "platforms": string[], "preferLength": string, "captionStyle": string, "keyMoments": string[], "suggestedTitles": string[], "meta": { "needsGemma": string[] } }';
     default:
-      return '{ "title": string, "subtitle": string?, "sections": [{ "heading": string, "kind": "text"|"list"|"check"|"numbered"|"scenario"|"exercise"|"table"|"quote", "body": string, "items": string[]? }], "guidingPrinciple": string?, "cta": string, "caption": string?, "meta": { "needsGemma": string[] } }';
+      return '{ "title": string, "subtitle": string?, "sections": [{ "heading": string, "kind": "text"|"list"|"check"|"numbered"|"scenario"|"exercise"|"table"|"quote", "body": string, "items": string[]? }], "guidingPrinciple": string?, "cta": string, "caption": string?, "imageSubject": string?, "meta": { "needsGemma": string[] } }';
   }
 }
+
+/** Products that benefit from a suggested illustration (social/lead-magnet types). */
+const IMAGE_ELIGIBLE_RENDERERS = ['canva-static', 'canva-animated'];
 
 /**
  * POST /api/generate
@@ -54,6 +57,11 @@ export async function POST(req: NextRequest) {
       '',
       'Return ONLY a JSON object with this shape:',
       schemaFor(product.renderer),
+      IMAGE_ELIGIBLE_RENDERERS.includes(product.renderer)
+        ? 'Also include "imageSubject": a one-sentence plain-language description of an ' +
+          'illustration that would suit this post (no text/words in the image, no real ' +
+          'people/photos — describe a scene, metaphor, or abstract shape only).'
+        : '',
       'Put every [NEEDS GEMMA] gap into meta.needsGemma as well as inline.',
       `The renderer adds the fixed footer ("${fixedElements.footer}") and disclaimer automatically — do not include them.`,
       '',
