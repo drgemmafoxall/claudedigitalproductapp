@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { complete } from '@/lib/ai/client';
 import { getProduct } from '@/lib/registry/products';
 import { VOICE_RULES, QUALITY_GATE } from '@/lib/brand/voice';
-import { audiences, fixedElements } from '@/lib/brand/tokens';
+import { fixedElements, audienceLabelFor } from '@/lib/brand/tokens';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -30,13 +30,17 @@ const IMAGE_ELIGIBLE_RENDERERS = ['canva-static', 'canva-animated'];
 
 /**
  * POST /api/generate
- * Body: { brief: string, productId: string, audience: AudienceId, notes?: string }
+ * Body: { brief: string, productId: string, audiences: AudienceId[], notes?: string }
+ * (a single `audience: string` is still accepted for back-compat)
  * Returns structured product content (JSON) generated in brand voice, model-routed
  * by product tier, with the quality gate applied.
  */
 export async function POST(req: NextRequest) {
   try {
-    const { brief, productId, audience = 'parent', notes = '' } = await req.json();
+    const body = await req.json();
+    const { brief, productId, notes = '' } = body;
+    const audienceIds: string[] =
+      body.audiences ?? (body.audience ? [body.audience] : ['general']);
     const product = getProduct(productId);
     if (!product) {
       return NextResponse.json({ error: `Unknown product: ${productId}` }, { status: 400 });
@@ -44,8 +48,7 @@ export async function POST(req: NextRequest) {
     if (!brief?.trim()) {
       return NextResponse.json({ error: 'No source brief provided' }, { status: 400 });
     }
-    const audienceLabel =
-      audiences.find((a) => a.id === audience)?.label ?? 'Parents & caregivers';
+    const audienceLabel = audienceLabelFor(audienceIds);
 
     const system = [
       VOICE_RULES,
@@ -53,7 +56,9 @@ export async function POST(req: NextRequest) {
       `PRODUCT TYPE: ${product.label} (${product.description})`,
       `ANATOMY (follow exactly): ${product.anatomy}`,
       product.pages ? `LENGTH: ${product.pages} pages.` : '',
-      `AUDIENCE: ${audienceLabel} — use that register.`,
+      audienceIds.includes('general') || audienceIds.length > 1
+        ? `AUDIENCE: ${audienceLabel} — write in a register that is clear and welcoming to all of these readers at once (avoid jargon specific to only one group).`
+        : `AUDIENCE: ${audienceLabel} — use that register.`,
       '',
       'Return ONLY a JSON object with this shape:',
       schemaFor(product.renderer),
@@ -83,7 +88,7 @@ export async function POST(req: NextRequest) {
     const start = raw.search(/[{]/);
     const content = JSON.parse(raw.slice(start));
 
-    return NextResponse.json({ content, usage, product: product.id, audience });
+    return NextResponse.json({ content, usage, product: product.id, audiences: audienceIds });
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Generation failed';
     return NextResponse.json({ error: message }, { status: 500 });

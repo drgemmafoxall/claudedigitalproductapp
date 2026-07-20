@@ -24,7 +24,7 @@ export default function CreateWizard() {
   const [rawText, setRawText] = useState('');
   const [brief, setBrief] = useState('');
   const [productId, setProductId] = useState(params.get('product') ?? 'tip-sheet');
-  const [audience, setAudience] = useState('parent');
+  const [audienceIds, setAudienceIds] = useState<string[]>(['general']);
   const [notes, setNotes] = useState('');
   const [content, setContent] = useState<GeneratedContent | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -34,6 +34,19 @@ export default function CreateWizard() {
   const chunksRef = useRef<Blob[]>([]);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageDriveUrl, setImageDriveUrl] = useState<string | null>(null);
+  const [pdfDriveUrl, setPdfDriveUrl] = useState<string | null>(null);
+
+  const toggleAudience = (id: string) => {
+    setAudienceIds((prev) => {
+      if (id === 'general') return ['general'];
+      const withoutGeneral = prev.filter((a) => a !== 'general');
+      return withoutGeneral.includes(id)
+        ? withoutGeneral.filter((a) => a !== id).length
+          ? withoutGeneral.filter((a) => a !== id)
+          : ['general']
+        : [...withoutGeneral, id];
+    });
+  };
 
   const api = async (url: string, body: unknown) => {
     const res = await fetch(url, {
@@ -112,7 +125,7 @@ export default function CreateWizard() {
     setBusy('Generating your product…');
     setError(null);
     try {
-      const data = await api('/api/generate', { brief, productId, audience, notes });
+      const data = await api('/api/generate', { brief, productId, audiences: audienceIds, notes });
       setContent(data.content);
       setStep('review');
     } catch (e) {
@@ -129,7 +142,7 @@ export default function CreateWizard() {
       const res = await fetch('/api/render/pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, audience, format: 'pdf' }),
+        body: JSON.stringify({ content, audiences: audienceIds, productId, format: 'pdf' }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? 'Render failed');
       const blob = await res.blob();
@@ -144,6 +157,25 @@ export default function CreateWizard() {
     }
   };
 
+  const exportPdfToDrive = async () => {
+    setBusy('Exporting PDF to Drive…');
+    setError(null);
+    try {
+      const data = await api('/api/render/pdf', {
+        content,
+        audiences: audienceIds,
+        productId,
+        format: 'drive',
+      });
+      setPdfDriveUrl(data.driveUrl);
+      if (data.driveUrl) window.open(data.driveUrl, '_blank');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Drive export failed');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const generateImage = async () => {
     if (!content?.imageSubject) return;
     setBusy('Generating your illustration…');
@@ -153,7 +185,7 @@ export default function CreateWizard() {
       const data = await api('/api/images/generate', {
         subject: content.imageSubject,
         format,
-        audience,
+        audience: audienceIds.join(', '),
       });
       setImageUrl(data.publicUrl ?? data.dataUrl);
       setImageDriveUrl(data.driveUrl ?? null);
@@ -168,7 +200,7 @@ export default function CreateWizard() {
     const res = await fetch('/api/render/pdf', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content, audience, format: 'html' }),
+      body: JSON.stringify({ content, audiences: audienceIds, productId, format: 'html' }),
     });
     const html = await res.text();
     const w = window.open('', '_blank');
@@ -308,13 +340,16 @@ export default function CreateWizard() {
           </div>
           <div>
             <h2 className="font-bold text-base mb-2">Who is it for?</h2>
+            <p className="text-xs text-lightslate mb-2">
+              Pick one or more, or choose General / all audiences.
+            </p>
             <div className="flex flex-wrap gap-2">
               {audiences.map((a) => (
                 <button
                   key={a.id}
-                  onClick={() => setAudience(a.id)}
+                  onClick={() => toggleAudience(a.id)}
                   className={`rounded-full px-4 py-1.5 text-sm border ${
-                    audience === a.id
+                    audienceIds.includes(a.id)
                       ? 'border-sage bg-sage/15 text-ink font-semibold'
                       : 'border-cardborder text-slate hover:border-sage/50'
                   }`}
@@ -487,8 +522,27 @@ export default function CreateWizard() {
               >
                 Download PDF
               </button>
+              <button
+                onClick={exportPdfToDrive}
+                disabled={!!busy}
+                className="rounded-full border border-sage px-5 py-2 text-sm font-medium text-ink hover:bg-sage/10 disabled:opacity-40"
+              >
+                Export PDF to Drive
+              </button>
             </div>
           </div>
+          {pdfDriveUrl && (
+            <div className="text-right">
+              <a
+                href={pdfDriveUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-sage underline"
+              >
+                Saved to your Drive exports folder →
+              </a>
+            </div>
+          )}
         </section>
       )}
     </div>

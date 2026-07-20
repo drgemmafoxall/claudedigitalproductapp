@@ -65,6 +65,7 @@ export const fixedElements = {
 } as const;
 
 export const audiences = [
+  { id: 'general', label: 'General / all audiences' },
   { id: 'parent', label: 'Parents & caregivers' },
   { id: 'educator', label: 'Educators & teachers' },
   { id: 'clinician', label: 'Therapists & clinicians' },
@@ -72,3 +73,12 @@ export const audiences = [
   { id: 'leadership', label: 'School leaders & policy' },
 ] as const;
 export type AudienceId = (typeof audiences)[number]['id'];
+
+/** Builds a display label from one or more selected audience ids. */
+export function audienceLabelFor(ids: string[]): string {
+  if (!ids.length || ids.includes('general')) return 'General / all audiences';
+  const labels = ids
+    .map((id) => audiences.find((a) => a.id === id)?.label as string | undefined)
+    .filter((l): l is string => Boolean(l));
+  return labels.length ? labels.join(' & ') : 'General / all audiences';
+}

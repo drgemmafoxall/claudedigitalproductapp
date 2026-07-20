@@ -75,14 +75,13 @@ export interface DriveUploadResult {
   webViewLink: string;
 }
 
-/** Uploads image bytes into the configured Drive folder. Throws on failure. */
-export async function uploadImageToDrive(
+/** Uploads bytes into an arbitrary Drive folder. Throws on failure. */
+export async function uploadBytesToDrive(
   bytes: Buffer,
   filename: string,
   mimeType: string,
+  folderId: string,
 ): Promise<DriveUploadResult> {
-  const folderId = process.env.GOOGLE_DRIVE_IMAGES_FOLDER_ID;
-  if (!folderId) throw new Error('GOOGLE_DRIVE_IMAGES_FOLDER_ID not set');
   const accessToken = await getAccessToken();
 
   const metadata = { name: filename, parents: [folderId] };
@@ -106,4 +105,25 @@ export async function uploadImageToDrive(
   if (!res.ok) throw new Error(`Drive upload failed: ${await res.text()}`);
   const data = await res.json();
   return { fileId: data.id, webViewLink: data.webViewLink };
+}
+
+/** Uploads a generated illustration into the images library folder. */
+export async function uploadImageToDrive(
+  bytes: Buffer,
+  filename: string,
+  mimeType: string,
+): Promise<DriveUploadResult> {
+  const folderId = process.env.GOOGLE_DRIVE_IMAGES_FOLDER_ID;
+  if (!folderId) throw new Error('GOOGLE_DRIVE_IMAGES_FOLDER_ID not set');
+  return uploadBytesToDrive(bytes, filename, mimeType, folderId);
+}
+
+/** Uploads a rendered PDF into the PDF exports folder. */
+export async function uploadPdfToDrive(
+  bytes: Buffer,
+  filename: string,
+): Promise<DriveUploadResult> {
+  const folderId = process.env.GOOGLE_DRIVE_PDF_FOLDER_ID;
+  if (!folderId) throw new Error('GOOGLE_DRIVE_PDF_FOLDER_ID not set');
+  return uploadBytesToDrive(bytes, filename, 'application/pdf', folderId);
 }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { renderDocumentHtml, type RenderContent } from '@/lib/render/templates/base';
-import { audiences } from '@/lib/brand/tokens';
+import { audienceLabelFor } from '@/lib/brand/tokens';
+import { getProduct } from '@/lib/registry/products';
+import { uploadPdfToDrive } from '@/lib/adapters/drive';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -22,14 +24,27 @@ async function launchBrowser() {
 
 /**
  * POST /api/render/pdf
- * Body: { content: RenderContent, audience?: AudienceId, html?: string, format?: 'pdf'|'html' }
- * format: 'html' returns the branded HTML (used for live preview); 'pdf' returns the file.
+ * Body: { content: RenderContent, audiences?: AudienceId[], productId?: string,
+ *         html?: string, format?: 'pdf'|'html'|'drive' }
+ * format: 'html' returns the branded HTML (live preview); 'pdf' returns the file;
+ * 'drive' renders the PDF and uploads it straight to Gemma's Drive exports folder,
+ * returning { driveUrl }.
  * Render settings follow the brand render spec (printBackground on, no header/footer, 0 margins).
+ * Single-page product types (product.pages === '1') are auto-shrunk to fit one sheet.
  */
 export async function POST(req: NextRequest) {
   try {
-    const { content, audience, html: providedHtml, format = 'pdf', kind = 'document' } = await req.json();
-    const audienceLabel = audiences.find((a) => a.id === audience)?.label;
+    const {
+      content,
+      audiences: audienceIds,
+      audience,
+      productId,
+      html: providedHtml,
+      format = 'pdf',
+      kind = 'document',
+    } = await req.json();
+    const audienceLabel = audienceLabelFor(audienceIds ?? (audience ? [audience] : []));
+    const product = productId ? getProduct(productId) : undefined;
     const html: string =
       providedHtml ??
       (kind === 'ebook'
@@ -46,6 +61,21 @@ export async function POST(req: NextRequest) {
       await page.setContent(html, { waitUntil: 'load' });
       // Wait for the Google Fonts (Nunito/Inter) to be ready before printing
       await page.evaluateHandle('document.fonts.ready');
+
+      // Single-page product types (one-pager, infographic, checklist, etc.) must fit
+      // on exactly one A4 sheet — shrink content proportionally if it slightly overflows.
+      if (kind === 'document' && product?.pages === '1') {
+        const A4_HEIGHT_PX = 1123; // 297mm at 96dpi
+        const contentHeight = await page.evaluate(() => {
+          const el = document.querySelector('.page');
+          return el ? el.scrollHeight : 0;
+        });
+        if (contentHeight > A4_HEIGHT_PX) {
+          const scale = Math.max(0.75, A4_HEIGHT_PX / contentHeight - 0.01);
+          await page.addStyleTag({ content: `.page { zoom: ${scale}; }` });
+        }
+      }
+
       const pdf = await page.pdf({
         format: 'A4',
         printBackground: true, // required — tints drop out without it
@@ -54,6 +84,12 @@ export async function POST(req: NextRequest) {
       });
       const title = (content as RenderContent)?.title ?? 'product';
       const filename = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60)}.pdf`;
+
+      if (format === 'drive') {
+        const drive = await uploadPdfToDrive(Buffer.from(pdf), filename);
+        return NextResponse.json({ driveUrl: drive.webViewLink });
+      }
+
       return new NextResponse(Buffer.from(pdf), {
         headers: {
           'Content-Type': 'application/pdf',
