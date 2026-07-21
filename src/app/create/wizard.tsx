@@ -225,15 +225,19 @@ export default function CreateWizard() {
   };
 
   /**
-   * Copies a tab-separated block (headline, caption, cta — one row per
-   * selected image, in the SAME order the Apps Script fills the image
-   * column) so it pastes straight into columns C:E of the Bulk Create sheet
+   * Copies a tab-separated block (headline, caption, cta, check — one row
+   * per selected image, in the SAME order the Apps Script fills the image
+   * column) so it pastes straight into columns C:F of the Bulk Create sheet
    * (dr-gemma-bulk-create-template.xlsx: A subject, B image, C headline,
-   * D caption, E cta). Deliberately starts at headline, not subject —
-   * columns A and B are already filled by the Apps Script from the Drive
-   * folder, so re-pasting subject text here would risk misaligning rows if
-   * the two paste actions ever happen in a different order than expected.
-   * Paste this at cell C2 specifically, never A2.
+   * D caption, E cta, F check). Deliberately starts at headline, not
+   * subject — columns A and B are already filled by the Apps Script from
+   * the Drive folder, so re-pasting subject text here would risk
+   * misaligning rows if the two paste actions ever happen in a different
+   * order than expected. Paste this at cell C2 specifically, never A2.
+   *
+   * NOTE: exactly 4 values (no blank spacer) so "check" lands in column F,
+   * matching the sheet header — a stray blank 4th element here previously
+   * pushed it into G instead.
    */
   const copyBulkCreateText = async () => {
     if (!imageSet) return;
@@ -241,7 +245,7 @@ export default function CreateWizard() {
     // Column F ("check") repeats the subject text purely so you can visually confirm
     // each row still lines up with the matching image in column B before generating —
     // it's not read by Canva, just a sanity-check column. Delete it once you've verified.
-    const rows = selected.map((i) => [i.headline ?? '', i.caption ?? '', i.cta ?? '', '', i.subject]);
+    const rows = selected.map((i) => [i.headline ?? '', i.caption ?? '', i.cta ?? '', i.subject]);
     const text = rows.map((r) => r.join('\t')).join('\n');
     try {
       await navigator.clipboard.writeText(text);
