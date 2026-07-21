@@ -22,7 +22,7 @@ function schemaFor(renderer: string): string {
     case 'vizard-clips':
       return '{ "projectName": string, "platforms": string[], "preferLength": string, "captionStyle": string, "keyMoments": string[], "suggestedTitles": string[], "meta": { "needsGemma": string[] } }';
     case 'image-set':
-      return '{ "title": string, "images": [{ "subject": string }], "meta": { "needsGemma": string[] } }';
+      return '{ "title": string, "images": [{ "subject": string, "headline": string, "caption": string, "cta": string }], "meta": { "needsGemma": string[] } }';
     default:
       return '{ "title": string, "subtitle": string?, "sections": [{ "heading": string, "kind": "text"|"list"|"check"|"numbered"|"scenario"|"exercise"|"table"|"quote", "body": string, "items": string[]? }], "guidingPrinciple": string?, "cta": string, "caption": string?, "imageSubject": string?, "meta": { "needsGemma": string[] } }';
   }
@@ -88,7 +88,12 @@ export async function POST(req: NextRequest) {
       productId === 'magiclight-kids-short' ? castBibleForPrompt() : '',
       productId === 'magiclight-video' ? DR_GEMMA_AVATAR_BRIEF : '',
       product.renderer === 'image-set'
-        ? `Produce EXACTLY ${imageCountForBrief(brief)} image subjects — distinct scenes/metaphors, no duplicates or near-repeats, covering the range of the source material.`
+        ? `Produce EXACTLY ${imageCountForBrief(brief)} image subjects — distinct scenes/metaphors, ` +
+          'no duplicates or near-repeats, covering the range of the source material. For each ' +
+          'image also write a short matching "headline" (≤8 words), a "caption" (1–2 short ' +
+          'sentences, no hashtags), and a "cta" (1–3 action words) — these are the Canva Bulk ' +
+          'Create text fields that will sit alongside that image, so they must read naturally ' +
+          'as a single social post together with the image subject.'
         : '',
       '',
       'Return ONLY a JSON object with this shape:',

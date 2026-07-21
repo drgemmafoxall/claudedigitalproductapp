@@ -19,13 +19,16 @@ interface GeneratedContent {
   cta: string;
   caption?: string;
   imageSubject?: string;
-  images?: { subject: string }[];
+  images?: { subject: string; headline?: string; caption?: string; cta?: string }[];
   meta?: { needsGemma?: string[] };
 }
 
 interface ImageSetItem {
   subject: string;
   prompt: string;
+  headline?: string;
+  caption?: string;
+  cta?: string;
   selected: boolean;
 }
 
@@ -164,7 +167,9 @@ export default function CreateWizard() {
   };
 
   /** Builds ready-to-paste Nano Banana prompts for every subject (no image generation, no API cost). */
-  const buildImageSetPrompts = async (images: { subject: string }[]) => {
+  const buildImageSetPrompts = async (
+    images: { subject: string; headline?: string; caption?: string; cta?: string }[],
+  ) => {
     setBusy('Preparing your prompts…');
     try {
       const data = await api('/api/images/prompts', {
@@ -173,11 +178,17 @@ export default function CreateWizard() {
         audience: audienceIds.join(', '),
       });
       setImageSet(
-        data.prompts.map((p: { subject: string; prompt: string }) => ({
-          subject: p.subject,
-          prompt: p.prompt,
-          selected: true,
-        })),
+        data.prompts.map((p: { subject: string; prompt: string }) => {
+          const match = images.find((im) => im.subject === p.subject);
+          return {
+            subject: p.subject,
+            prompt: p.prompt,
+            headline: match?.headline,
+            caption: match?.caption,
+            cta: match?.cta,
+            selected: true,
+          };
+        }),
       );
     } catch (e) {
       setImageSetNotice(`Could not build prompts: ${e instanceof Error ? e.message : 'unknown error'}`);
@@ -210,6 +221,30 @@ export default function CreateWizard() {
       setImageSetNotice(`Copied ${selected.length} prompt${selected.length === 1 ? '' : 's'} to your clipboard.`);
     } catch {
       setImageSetNotice('Could not copy automatically — copy each prompt individually instead.');
+    }
+  };
+
+  /**
+   * Copies a tab-separated block (subject, headline, caption, cta — one row
+   * per selected image, same order the Apps Script will fill the image
+   * column in) so it pastes straight into the matching Google Sheet columns
+   * in a single paste. No image column here — the Apps Script fills that
+   * from Drive directly, since Bulk Create needs embedded images, not text.
+   */
+  const copyBulkCreateText = async () => {
+    if (!imageSet) return;
+    const selected = imageSet.filter((i) => i.selected);
+    const rows = selected.map((i) => [i.subject, i.headline ?? '', i.caption ?? '', i.cta ?? '']);
+    const text = rows.map((r) => r.join('\t')).join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      setImageSetNotice(
+        `Copied text for ${selected.length} row${selected.length === 1 ? '' : 's'} — click cell A2 in your ` +
+          'Bulk Create sheet and paste (this fills subject/headline/caption/cta in one go; the image ' +
+          'column is filled separately by the Apps Script).',
+      );
+    } catch {
+      setImageSetNotice('Could not copy automatically — copy the text columns individually instead.');
     }
   };
 
@@ -525,10 +560,11 @@ export default function CreateWizard() {
           <h1 className="text-2xl font-extrabold">{content.title}</h1>
           <p className="text-sm">
             {imageSet?.length ?? content.images.length} ready-to-paste Nano Banana prompts, built
-            from your content. Untick any you don't want, then copy them into your Gemini Pro / AI
-            Studio account — one prompt per image. Download each result and add it to your
-            Canva Bulk Create sheet (see the Google Sheet + Apps Script setup for pulling the
-            downloaded images into fetchable URLs automatically).
+            from your content, each with matching headline/caption/CTA text for Canva. Untick any
+            you don't want, then copy the image prompts into your Gemini Pro / AI Studio account —
+            one prompt per image. Download each result into your Bulk Create Drive folder, run the
+            Apps Script to pull them into the Sheet, then use "Copy text for Bulk Create" below to
+            paste the matching text columns in alongside them.
           </p>
           {imageSetNotice && <div className="text-xs text-lightslate">{imageSetNotice}</div>}
           <div className="space-y-3">
@@ -557,12 +593,38 @@ export default function CreateWizard() {
                 >
                   Copy this prompt
                 </button>
+                {(img.headline || img.caption || img.cta) && (
+                  <div className="mt-2 text-xs text-slate space-y-0.5 border-t border-cardborder pt-2">
+                    {img.headline && (
+                      <div>
+                        <span className="text-lightslate">headline:</span> {img.headline}
+                      </div>
+                    )}
+                    {img.caption && (
+                      <div>
+                        <span className="text-lightslate">caption:</span> {img.caption}
+                      </div>
+                    )}
+                    {img.cta && (
+                      <div>
+                        <span className="text-lightslate">cta:</span> {img.cta}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
-          <div className="flex justify-between items-center pt-2">
+          <div className="flex flex-wrap justify-between items-center gap-3 pt-2">
             <button onClick={() => setStep('select')} className="text-sm text-lightslate hover:text-ink">
               Back
+            </button>
+            <button
+              onClick={copyBulkCreateText}
+              disabled={!imageSet?.some((i) => i.selected)}
+              className="rounded-full border border-sage px-5 py-2 text-sm font-medium text-ink hover:bg-sage/10 disabled:opacity-40"
+            >
+              Copy text for Bulk Create
             </button>
             <button
               onClick={copyAllSelectedPrompts}
