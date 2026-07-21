@@ -236,13 +236,24 @@ export const PRODUCTS: ProductDef[] = [
   },
   {
     id: 'magiclight-video',
-    label: 'Explainer video (MagicLight kit)',
+    label: 'Explainer video (MagicLight kit — Dr Gemma avatar)',
     group: 'audio-video',
     renderer: 'prompt-kit-magiclight',
     tier: 'sonnet',
-    description: 'Scene-by-scene script package for MagicLight explainer videos',
+    description: 'Scene-by-scene script package for adult MagicLight explainer videos, hosted by the Dr Gemma cartoon avatar',
     anatomy:
-      'Video title + logline, 6–12 scenes each with narration line (≤25 words), visual direction in brand style (sage/cream palette, soft rounded illustration), character/setting consistency notes, end-card CTA.',
+      'Video title + logline, 6–12 scenes each with narration line (≤25 words), visual direction in brand style (sage/cream palette, soft rounded illustration, Dr Gemma avatar as consistent host), character/setting consistency notes, end-card CTA.',
+  },
+  {
+    id: 'magiclight-kids-short',
+    label: 'Kids animal short (MagicLight kit — Holiday Club cast)',
+    group: 'audio-video',
+    renderer: 'prompt-kit-magiclight',
+    tier: 'sonnet',
+    description:
+      'Pixar-style "show not tell" short film using the Holiday Club animal ensemble — positive social/inclusion themes for a primary-school-aged audience, no narrated lessons',
+    anatomy:
+      'Video title + logline, 5–10 scenes each with a narration line (only if needed — many beats should carry with visual action alone, ≤15 words when used, simple literal vocabulary a 3–12 year old understands), visual direction per scene naming which cast member(s) appear and what they do, Pixar-style soft 3D visual notes, gentle end-card (no direct moral statement — end on a warm inclusive moment, not a lesson).',
   },
 ];
 

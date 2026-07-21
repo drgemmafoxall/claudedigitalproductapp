@@ -71,6 +71,7 @@ export const audiences = [
   { id: 'clinician', label: 'Therapists & clinicians' },
   { id: 'autistic-adult', label: 'Autistic adults' },
   { id: 'leadership', label: 'School leaders & policy' },
+  { id: 'children', label: 'Children (developmental age 3–12)' },
 ] as const;
 export type AudienceId = (typeof audiences)[number]['id'];
 

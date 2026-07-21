@@ -3,6 +3,7 @@ import { complete } from '@/lib/ai/client';
 import { getProduct } from '@/lib/registry/products';
 import { VOICE_RULES, QUALITY_GATE } from '@/lib/brand/voice';
 import { fixedElements, audienceLabelFor } from '@/lib/brand/tokens';
+import { castBibleForPrompt, DR_GEMMA_AVATAR_BRIEF } from '@/lib/characters/cast';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -56,9 +57,15 @@ export async function POST(req: NextRequest) {
       `PRODUCT TYPE: ${product.label} (${product.description})`,
       `ANATOMY (follow exactly): ${product.anatomy}`,
       product.pages ? `LENGTH: ${product.pages} pages.` : '',
-      audienceIds.includes('general') || audienceIds.length > 1
-        ? `AUDIENCE: ${audienceLabel} — write in a register that is clear and welcoming to all of these readers at once (avoid jargon specific to only one group).`
-        : `AUDIENCE: ${audienceLabel} — use that register.`,
+      audienceIds.includes('children')
+        ? `AUDIENCE: ${audienceLabel} — write for a developmental age of 3–12. Use short, ` +
+          'simple sentences, everyday concrete words, and literal explanations (no idioms, ' +
+          'sarcasm, or abstract metaphors a literal thinker might misread). Warm and playful tone.'
+        : audienceIds.includes('general') || audienceIds.length > 1
+          ? `AUDIENCE: ${audienceLabel} — write in a register that is clear and welcoming to all of these readers at once (avoid jargon specific to only one group).`
+          : `AUDIENCE: ${audienceLabel} — use that register.`,
+      productId === 'magiclight-kids-short' ? castBibleForPrompt() : '',
+      productId === 'magiclight-video' ? DR_GEMMA_AVATAR_BRIEF : '',
       '',
       'Return ONLY a JSON object with this shape:',
       schemaFor(product.renderer),
