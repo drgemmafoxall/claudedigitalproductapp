@@ -225,23 +225,34 @@ export default function CreateWizard() {
   };
 
   /**
-   * Copies a tab-separated block (subject, headline, caption, cta — one row
-   * per selected image, same order the Apps Script will fill the image
-   * column in) so it pastes straight into the matching Google Sheet columns
-   * in a single paste. No image column here — the Apps Script fills that
-   * from Drive directly, since Bulk Create needs embedded images, not text.
+   * Copies a tab-separated block (headline, caption, cta — one row per
+   * selected image, in the SAME order the Apps Script fills the image
+   * column) so it pastes straight into columns C:E of the Bulk Create sheet
+   * (dr-gemma-bulk-create-template.xlsx: A subject, B image, C headline,
+   * D caption, E cta). Deliberately starts at headline, not subject —
+   * columns A and B are already filled by the Apps Script from the Drive
+   * folder, so re-pasting subject text here would risk misaligning rows if
+   * the two paste actions ever happen in a different order than expected.
+   * Paste this at cell C2 specifically, never A2.
    */
   const copyBulkCreateText = async () => {
     if (!imageSet) return;
     const selected = imageSet.filter((i) => i.selected);
-    const rows = selected.map((i) => [i.subject, i.headline ?? '', i.caption ?? '', i.cta ?? '']);
+    // Column F ("check") repeats the subject text purely so you can visually confirm
+    // each row still lines up with the matching image in column B before generating —
+    // it's not read by Canva, just a sanity-check column. Delete it once you've verified.
+    const rows = selected.map((i) => [i.headline ?? '', i.caption ?? '', i.cta ?? '', '', i.subject]);
     const text = rows.map((r) => r.join('\t')).join('\n');
     try {
       await navigator.clipboard.writeText(text);
       setImageSetNotice(
-        `Copied text for ${selected.length} row${selected.length === 1 ? '' : 's'} — click cell A2 in your ` +
-          'Bulk Create sheet and paste (this fills subject/headline/caption/cta in one go; the image ' +
-          'column is filled separately by the Apps Script).',
+        `Copied text for ${selected.length} row${selected.length === 1 ? '' : 's'} — click cell C2 ` +
+          '(the "headline" column) in your Bulk Create sheet and paste. This fills headline/caption/cta ' +
+          'plus a "check" column (F) repeating the subject so you can confirm each row still matches its ' +
+          'image before generating. Columns A (subject) and B (image) are filled separately by the Apps ' +
+          'Script, so do not paste starting at A2 or you will overwrite the image column. Compare column ' +
+          'F to column A row-by-row — if they don’t match, the Gemini downloads were named/ordered ' +
+          'differently than the prompts, and rows need re-aligning before generating in Canva.',
       );
     } catch {
       setImageSetNotice('Could not copy automatically — copy the text columns individually instead.');
