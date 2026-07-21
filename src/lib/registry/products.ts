@@ -11,7 +11,8 @@ export type Renderer =
   | 'ebook' // multi-chapter HTML → PDF (+ EPUB/KDP variants)
   | 'vizard-clips' // Vizard API: audio/video → captioned social clips
   | 'prompt-kit-suno' // ready-to-paste Suno prompt package
-  | 'prompt-kit-magiclight'; // ready-to-paste MagicLight scene package
+  | 'prompt-kit-magiclight' // ready-to-paste MagicLight scene package
+  | 'image-set'; // Gemini illustrations, generated as a reviewable batch → selective Drive save
 
 export type ModelTier = 'haiku' | 'sonnet' | 'top';
 
@@ -201,6 +202,17 @@ export const PRODUCTS: ProductDef[] = [
     description: 'Animated brand template → MP4',
     anatomy:
       'Same fields as the matching static post, plus per-frame text timing notes (3–6 frames, ≤12 words per frame).',
+  },
+  {
+    id: 'image-set',
+    label: 'Image set (illustrations for Canva)',
+    group: 'social',
+    renderer: 'image-set',
+    tier: 'sonnet',
+    description:
+      'A batch of brand-safe illustrations generated from your content, previewed together — pick which ones to keep and save to Drive',
+    anatomy:
+      'A set of distinct image subjects (one-sentence plain-language scene descriptions, no text-in-image, no real people) that together illustrate the source material — varied scenes/metaphors, no duplicates. Count scales with how much source material there is.',
   },
   // ---- courses ----
   {

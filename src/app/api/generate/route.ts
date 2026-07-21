@@ -21,6 +21,8 @@ function schemaFor(renderer: string): string {
       return '{ "videoTitle": string, "logline": string, "styleNotes": string, "scenes": [{ "narration": string, "visualDirection": string }], "endCardCta": string, "meta": { "needsGemma": string[] } }';
     case 'vizard-clips':
       return '{ "projectName": string, "platforms": string[], "preferLength": string, "captionStyle": string, "keyMoments": string[], "suggestedTitles": string[], "meta": { "needsGemma": string[] } }';
+    case 'image-set':
+      return '{ "title": string, "images": [{ "subject": string }], "meta": { "needsGemma": string[] } }';
     default:
       return '{ "title": string, "subtitle": string?, "sections": [{ "heading": string, "kind": "text"|"list"|"check"|"numbered"|"scenario"|"exercise"|"table"|"quote", "body": string, "items": string[]? }], "guidingPrinciple": string?, "cta": string, "caption": string?, "imageSubject": string?, "meta": { "needsGemma": string[] } }';
   }
@@ -28,6 +30,12 @@ function schemaFor(renderer: string): string {
 
 /** Products that benefit from a suggested illustration (social/lead-magnet types). */
 const IMAGE_ELIGIBLE_RENDERERS = ['canva-static', 'canva-animated'];
+
+/** How many images to generate for an image-set, scaled to how much source material there is. */
+function imageCountForBrief(brief: string): number {
+  const words = brief.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(3, Math.min(12, Math.round(words / 120)));
+}
 
 /**
  * POST /api/generate
@@ -66,6 +74,9 @@ export async function POST(req: NextRequest) {
           : `AUDIENCE: ${audienceLabel} — use that register.`,
       productId === 'magiclight-kids-short' ? castBibleForPrompt() : '',
       productId === 'magiclight-video' ? DR_GEMMA_AVATAR_BRIEF : '',
+      product.renderer === 'image-set'
+        ? `Produce EXACTLY ${imageCountForBrief(brief)} image subjects — distinct scenes/metaphors, no duplicates or near-repeats, covering the range of the source material.`
+        : '',
       '',
       'Return ONLY a JSON object with this shape:',
       schemaFor(product.renderer),

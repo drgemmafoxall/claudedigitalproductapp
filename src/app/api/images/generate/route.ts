@@ -11,14 +11,17 @@ const STORAGE_BUCKET = 'generated-images';
 /**
  * POST /api/images/generate
  * Body: { subject: string, format?: 'square'|'story'|'landscape', audience?: string,
- *         projectId?: string }
+ *         projectId?: string, pushToDrive?: boolean }
  * Generates a brand-safe illustration (Gemini "Nano Banana"), stores it in Supabase
  * Storage, and returns its public URL — ready to feed into Canva autofill or the
  * Content360 CSV media_url column.
+ * pushToDrive (default true) — set false when previewing a batch (e.g. the
+ * image-set product) so only the images Gemma actually selects get uploaded,
+ * via a follow-up call to /api/images/save-to-drive.
  */
 export async function POST(req: NextRequest) {
   try {
-    const { subject, format = 'square', audience, projectId } = await req.json();
+    const { subject, format = 'square', audience, projectId, pushToDrive = true } = await req.json();
     if (!subject?.trim()) {
       return NextResponse.json({ error: 'subject is required' }, { status: 400 });
     }
@@ -50,11 +53,13 @@ export async function POST(req: NextRequest) {
     // image lands somewhere she can browse/reuse without touching the app —
     // best-effort: silently skipped if the Drive service account isn't configured.
     let driveUrl: string | null = null;
-    try {
-      const drive = await uploadImageToDrive(bytes, filename, image.mimeType);
-      driveUrl = drive.webViewLink;
-    } catch {
-      // Drive integration not configured yet — not fatal, image is still returned/stored above
+    if (pushToDrive) {
+      try {
+        const drive = await uploadImageToDrive(bytes, filename, image.mimeType);
+        driveUrl = drive.webViewLink;
+      } catch {
+        // Drive integration not configured yet — not fatal, image is still returned/stored above
+      }
     }
 
     if (projectId) {

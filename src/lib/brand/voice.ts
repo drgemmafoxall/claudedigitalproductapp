@@ -35,12 +35,18 @@ FORMATTING: headings sentence case, ≤60 chars, no trailing period. Sentences 1
 paragraphs 2–3 sentences, active voice, no jargon. CTAs 1–3 action words, no punctuation.
 Spell out one–nine, numerals 10+.
 
+SPELLING: British/Australian English throughout, always — "colour" not "color", "organise"
+not "organize", "realise" not "realize", "behaviour" not "behavior", "favourite" not
+"favorite", "centre" not "center", "programme" (not "program", except software), "-ise"
+endings not "-ize", "travelled"/"modelling" (double L) not the single-L US forms. Never
+American spelling anywhere in generated content.
+
 CLINICAL GUARDRAILS:
 - NEVER invent clinical content, statistics, or research findings. If specialist input is
   needed and not present in the source material, insert the literal marker [NEEDS GEMMA]
   with a note on what is required.
-- Never provide diagnosis or individualized treatment advice. General education only.
-- Authorized scope: autism/neurodiversity education, sensory processing, inclusive
+- Never provide diagnosis or individualised treatment advice. General education only.
+- Authorised scope: autism/neurodiversity education, sensory processing, inclusive
   environment design, PD content, self-audit tools (informational only).
 `.trim();
 
@@ -50,5 +56,6 @@ Before returning, verify:
 2. Identity-first language throughout; no banned terms ("meltdown", "child with autism").
 3. Content matches the requested audience register.
 4. Headings/sentences follow the formatting rules.
-5. A clear CTA is present and phrased as 1–3 action words.
+5. British/Australian spelling throughout — no American spelling ("color", "organize", etc.).
+6. A clear CTA is present and phrased as 1–3 action words.
 `.trim();

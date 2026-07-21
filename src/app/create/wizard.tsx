@@ -15,7 +15,16 @@ interface GeneratedContent {
   cta: string;
   caption?: string;
   imageSubject?: string;
+  images?: { subject: string }[];
   meta?: { needsGemma?: string[] };
+}
+
+interface ImageSetItem {
+  subject: string;
+  dataUrl: string;
+  publicUrl?: string | null;
+  driveUrl?: string | null;
+  selected: boolean;
 }
 
 export default function CreateWizard() {
@@ -37,6 +46,8 @@ export default function CreateWizard() {
   const [pdfDriveUrl, setPdfDriveUrl] = useState<string | null>(null);
   const [savedRowId, setSavedRowId] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
+  const [imageSet, setImageSet] = useState<ImageSetItem[] | null>(null);
+  const [imageSetNotice, setImageSetNotice] = useState<string | null>(null);
 
   const toggleAudience = (id: string) => {
     setAudienceIds((prev) => {
@@ -130,7 +141,11 @@ export default function CreateWizard() {
       const data = await api('/api/generate', { brief, productId, audiences: audienceIds, notes });
       setContent(data.content);
       setStep('review');
-      saveToLibrary(data.content);
+      if (data.content?.images?.length) {
+        generateImageSetPreview(data.content.images);
+      } else {
+        saveToLibrary(data.content);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Generation failed');
     } finally {
@@ -138,9 +153,75 @@ export default function CreateWizard() {
     }
   };
 
-  /** Best-effort: persist the generated product to the Library. Never blocks the UI. */
-  const saveToLibrary = async (generatedContent: GeneratedContent) => {
+  /** Renders every subject in an image-set as a preview (no Drive upload yet). */
+  const generateImageSetPreview = async (images: { subject: string }[]) => {
+    setImageSet(images.map((im) => ({ subject: im.subject, dataUrl: '', selected: true })));
+    for (let i = 0; i < images.length; i++) {
+      setBusy(`Generating illustration ${i + 1} of ${images.length}…`);
+      try {
+        const data = await api('/api/images/generate', {
+          subject: images[i].subject,
+          format: productId.includes('story') ? 'story' : 'square',
+          audience: audienceIds.join(', '),
+          pushToDrive: false,
+        });
+        setImageSet((prev) =>
+          prev
+            ? prev.map((item, idx) =>
+                idx === i
+                  ? { ...item, dataUrl: data.publicUrl ?? data.dataUrl, publicUrl: data.publicUrl }
+                  : item,
+              )
+            : prev,
+        );
+      } catch (e) {
+        setImageSetNotice(
+          `Image ${i + 1} failed to generate (${e instanceof Error ? e.message : 'unknown error'}) — the rest continued.`,
+        );
+      }
+    }
+    setBusy(null);
+  };
+
+  const toggleImageSelected = (i: number) => {
+    setImageSet((prev) =>
+      prev ? prev.map((item, idx) => (idx === i ? { ...item, selected: !item.selected } : item)) : prev,
+    );
+  };
+
+  const saveSelectedImagesToDrive = async () => {
+    if (!imageSet) return;
+    setBusy('Saving selected images to Drive…');
+    setError(null);
     try {
+      const updated = [...imageSet];
+      for (let i = 0; i < updated.length; i++) {
+        const item = updated[i];
+        if (!item.selected || item.driveUrl || !item.dataUrl?.startsWith('data:')) continue;
+        try {
+          const data = await api('/api/images/save-to-drive', { dataUrl: item.dataUrl, subject: item.subject });
+          updated[i] = { ...item, driveUrl: data.driveUrl };
+        } catch (e) {
+          setImageSetNotice(`Could not save "${item.subject}" to Drive: ${e instanceof Error ? e.message : 'error'}`);
+        }
+      }
+      setImageSet(updated);
+      const savedCount = updated.filter((i) => i.selected).length;
+      setImageSetNotice(`Saved ${savedCount} selected image${savedCount === 1 ? '' : 's'} to your Drive folder.`);
+      if (content) {
+        await saveToLibrary({ ...content, images: updated as unknown as { subject: string }[] });
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Drive save failed');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /** Best-effort: persist the generated product to the Library. Never blocks the UI. */
+  const saveToLibrary = async (generatedContent: GeneratedContent, rowId?: string | null) => {
+    try {
+      const existingId = rowId ?? savedRowId;
       const data = await api('/api/library', {
         title: generatedContent.title,
         rawInput: rawText,
@@ -148,8 +229,9 @@ export default function CreateWizard() {
         productId,
         audience: audienceIds.join(', '),
         content: generatedContent,
+        existingProductRowId: existingId ?? undefined,
       });
-      setSavedRowId(data.productRowId ?? null);
+      setSavedRowId(data.productRowId ?? existingId ?? null);
       setSaveNotice('Saved to your Library');
     } catch {
       setSaveNotice('Could not save to Library (Supabase not configured yet) — your work is still safe on this screen.');
@@ -420,7 +502,69 @@ export default function CreateWizard() {
         </section>
       )}
 
-      {step === 'review' && content && !content.sections && (
+      {step === 'review' && content && content.images && (
+        <section className="rounded-2xl bg-card border border-cardborder p-6 space-y-4">
+          <h1 className="text-2xl font-extrabold">{content.title}</h1>
+          <p className="text-sm">
+            {imageSet?.length ?? content.images.length} illustrations generated from your content.
+            Untick any you don't want, then save the rest straight to your Drive folder.
+          </p>
+          {imageSetNotice && <div className="text-xs text-lightslate">{imageSetNotice}</div>}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {(imageSet ?? []).map((img, i) => (
+              <label
+                key={i}
+                className={`rounded-xl border-2 overflow-hidden cursor-pointer ${
+                  img.selected ? 'border-sage' : 'border-cardborder opacity-50'
+                }`}
+              >
+                <div className="aspect-square bg-cream flex items-center justify-center">
+                  {img.dataUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={img.dataUrl} alt={img.subject} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xs text-lightslate animate-pulse">Generating…</span>
+                  )}
+                </div>
+                <div className="p-2 flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    checked={img.selected}
+                    onChange={() => toggleImageSelected(i)}
+                    className="mt-0.5"
+                  />
+                  <span className="text-xs text-slate">{img.subject}</span>
+                </div>
+                {img.driveUrl && (
+                  <a
+                    href={img.driveUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="block px-2 pb-2 text-xs text-sage underline"
+                  >
+                    Saved to Drive →
+                  </a>
+                )}
+              </label>
+            ))}
+          </div>
+          <div className="flex justify-between items-center pt-2">
+            <button onClick={() => setStep('select')} className="text-sm text-lightslate hover:text-ink">
+              Back
+            </button>
+            <button
+              onClick={saveSelectedImagesToDrive}
+              disabled={!!busy || !imageSet?.some((i) => i.selected && i.dataUrl)}
+              className="rounded-full bg-cta text-ink font-heading font-bold px-6 py-2 disabled:opacity-40"
+            >
+              Save selected to Drive
+            </button>
+          </div>
+        </section>
+      )}
+
+      {step === 'review' && content && !content.sections && !content.images && (
         <section className="rounded-2xl bg-card border border-cardborder p-6 space-y-4">
           <h1 className="text-2xl font-extrabold">Review before it ships</h1>
           <p className="text-sm">
