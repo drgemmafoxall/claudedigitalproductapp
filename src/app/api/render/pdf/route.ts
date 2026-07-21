@@ -62,8 +62,10 @@ export async function POST(req: NextRequest) {
       // Wait for the Google Fonts (Nunito/Inter) to be ready before printing
       await page.evaluateHandle('document.fonts.ready');
 
-      // Single-page product types (one-pager, infographic, checklist, etc.) must fit
-      // on exactly one A4 sheet — shrink content proportionally if it slightly overflows.
+      // Single-page-by-design document outputs (pages === '1', e.g. one-pager,
+      // infographic) must fit on exactly one A4 sheet — shrink content proportionally
+      // if it slightly overflows. Multi-page-by-design types (workbook, resource-guide,
+      // etc.) are left alone since they're meant to span several pages.
       if (kind === 'document' && product?.pages === '1') {
         const A4_HEIGHT_PX = 1123; // 297mm at 96dpi
         const contentHeight = await page.evaluate(() => {

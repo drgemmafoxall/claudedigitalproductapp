@@ -7,6 +7,10 @@ import { audiences } from '@/lib/brand/tokens';
 
 type Step = 'capture' | 'brief' | 'select' | 'review';
 
+/** Gemma's Drive folder for exported PDFs — used by the "Open destination folder" link. */
+const DRIVE_EXPORTS_FOLDER_URL =
+  'https://drive.google.com/drive/folders/1zJUDUhNFbsKeNO8tAGE0FMofkMy318vS';
+
 interface GeneratedContent {
   title: string;
   subtitle?: string;
@@ -702,9 +706,9 @@ export default function CreateWizard() {
               <button
                 onClick={downloadPdf}
                 disabled={!!busy}
-                className="rounded-full bg-cta text-ink font-heading font-bold px-6 py-2 disabled:opacity-40"
+                className="rounded-full border border-sage px-5 py-2 text-sm font-medium text-ink hover:bg-sage/10 disabled:opacity-40"
               >
-                Download PDF
+                Print PDF
               </button>
               <button
                 onClick={exportPdfToDrive}
@@ -713,6 +717,14 @@ export default function CreateWizard() {
               >
                 Export PDF to Drive
               </button>
+              <a
+                href={DRIVE_EXPORTS_FOLDER_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full border border-sage px-5 py-2 text-sm font-medium text-ink hover:bg-sage/10"
+              >
+                Open destination folder
+              </a>
             </div>
           </div>
           {pdfDriveUrl && (

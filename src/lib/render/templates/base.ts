@@ -1,4 +1,5 @@
 import { colors, pastels, gradient, fixedElements, textOn } from '@/lib/brand/tokens';
+
 import { EMBEDDED_FONTS_CSS } from '@/lib/render/embedded-fonts';
 
 export interface RenderSection {
@@ -124,7 +125,7 @@ export function renderDocumentHtml(content: RenderContent, audienceLabel?: strin
   <div class="title-underline"></div>
   ${needs}
   ${content.sections.map(sectionHtml).join('\n')}
-  <div class="cta">${esc(content.cta)}</div>
+  <a class="cta" href="${fixedElements.websiteUrl}">${esc(content.cta)}</a>
   ${
     content.guidingPrinciple
       ? `<div class="principle"><div class="label">Guiding principle</div><div class="quote">${esc(content.guidingPrinciple)}</div></div>`

@@ -62,6 +62,8 @@ export const fixedElements = {
   copyright: 'Copyright 2025–2035 DoctorGemma.com. All rights reserved.',
   version: 'v1.0 · Jul 2026',
   page: { format: 'A4' as const, marginPt: 40 },
+  /** Default CTA destination — every "button" in a rendered PDF links here unless overridden. */
+  websiteUrl: 'https://www.doctorgemma.com',
 } as const;
 
 export const audiences = [

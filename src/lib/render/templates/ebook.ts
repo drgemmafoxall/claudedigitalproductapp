@@ -140,7 +140,7 @@ ${chapters}
   <div class="rule" style="margin-bottom:16pt"></div>
   ${md(book.conclusion)}
   ${md(book.aboutCta)}
-  <div class="cta">Explore more</div>
+  <a class="cta" href="${fixedElements.websiteUrl}">Explore more</a>
   <div class="disclaimer">${esc(fixedElements.disclaimer)}</div>
   <div class="pfoot">${esc(fixedElements.footer)}</div>
 </div>
