@@ -96,7 +96,7 @@ export function renderDocumentHtml(content: RenderContent, audienceLabel?: strin
   blockquote { border-left: 3pt solid ${colors.sage}; padding-left: 10pt;
        font-style: italic; color: ${colors.ink}; }
   .writein .line { border-bottom: 1pt solid ${colors.cardBorder}; height: 16pt; }
-  .cta { display: inline-block; align-self: flex-start; background: ${colors.cta}; color: ${textOn(colors.cta)};
+  .cta { display: inline-block; align-self: flex-start; background: ${colors.sage}; color: ${textOn(colors.sage)};
        font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 11pt;
        padding: 8pt 20pt; border-radius: 20pt; margin: 10pt 0; }
   .principle { text-align: right; margin-top: auto; padding-top: 12pt; }

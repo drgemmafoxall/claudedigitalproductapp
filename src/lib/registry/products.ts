@@ -26,6 +26,8 @@ export interface ProductDef {
   description: string;
   /** Anatomy injected into the generation prompt. */
   anatomy: string;
+  /** When set, the wizard offers a page-count choice (e.g. 1 or 2 A4 pages) for this product. */
+  pageLengthOptions?: number[];
 }
 
 export const PRODUCTS: ProductDef[] = [
@@ -37,6 +39,7 @@ export const PRODUCTS: ProductDef[] = [
     renderer: 'html-pdf',
     tier: 'sonnet',
     pages: '1–3',
+    pageLengthOptions: [1, 2],
     description: 'Task-based guide with checkboxes for tracking progress',
     anatomy:
       'Title, one-line purpose, 8–15 check items grouped under 2–4 subheads, each item ≤2 lines with an optional "why it matters" strategy line, closing encouragement, CTA.',
@@ -48,6 +51,7 @@ export const PRODUCTS: ProductDef[] = [
     renderer: 'html-pdf',
     tier: 'sonnet',
     pages: '1–3',
+    pageLengthOptions: [1, 2],
     description: 'Numbered tips in a quick-reference format',
     anatomy:
       'Title, intro (2–3 sentences), 5–10 numbered tips each with heading + body + practical strategy line, guiding principle quote, CTA.',
@@ -70,6 +74,7 @@ export const PRODUCTS: ProductDef[] = [
     renderer: 'html-pdf',
     tier: 'sonnet',
     pages: '1',
+    pageLengthOptions: [1, 2],
     description: 'Visual one-page presentation of data or a framework',
     anatomy:
       'Punchy title, 3–6 visual blocks (stat, comparison, steps), minimal copy per block (≤25 words), one guiding principle, CTA.',
@@ -81,6 +86,7 @@ export const PRODUCTS: ProductDef[] = [
     renderer: 'html-pdf',
     tier: 'sonnet',
     pages: '1',
+    pageLengthOptions: [1, 2],
     description: 'Single-page summary for quick reference',
     anatomy: 'Title, 3–4 compact sections, key-points sidebar, CTA. Strict one page.',
   },

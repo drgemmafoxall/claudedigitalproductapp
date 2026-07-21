@@ -96,7 +96,7 @@ export function renderEbookHtml(book: EbookContent, audienceLabel?: string): str
   .summary { background: ${colors.cream}; border-left: 3pt solid ${colors.sage};
     border-radius: 6pt; padding: 10pt 12pt; margin-top: 14pt; }
 
-  .end .cta { display: inline-block; background: ${colors.cta}; color: ${colors.ink};
+  .end .cta { display: inline-block; background: ${colors.sage}; color: ${colors.ink};
     font-family: 'Nunito', sans-serif; font-weight: 700; padding: 9pt 22pt;
     border-radius: 22pt; margin-top: 16pt; }
   .disclaimer { margin-top: 14pt; font-size: 7.5pt; color: ${colors.lightSlate}; }

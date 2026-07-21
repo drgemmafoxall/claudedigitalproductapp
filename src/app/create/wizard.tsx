@@ -39,6 +39,7 @@ export default function CreateWizard() {
   const [productId, setProductId] = useState(params.get('product') ?? 'tip-sheet');
   const [audienceIds, setAudienceIds] = useState<string[]>(['general']);
   const [notes, setNotes] = useState('');
+  const [pageLength, setPageLength] = useState<number | null>(null);
   const [content, setContent] = useState<GeneratedContent | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -142,14 +143,21 @@ export default function CreateWizard() {
     setBusy('Generating your product…');
     setError(null);
     try {
-      const data = await api('/api/generate', { brief, productId, audiences: audienceIds, notes });
+      const data = await api('/api/generate', {
+        brief,
+        productId,
+        audiences: audienceIds,
+        notes,
+        pageLength,
+      });
       setContent(data.content);
       setStep('review');
       if (data.content?.images?.length) {
         generateImageSetPreview(data.content.images);
-      } else {
-        saveToLibrary(data.content);
       }
+      // Note: we deliberately don't save to the Library here — only once Gemma
+      // downloads or exports the PDF (see downloadPdf / exportPdfToDrive), so the
+      // Library reflects finished work, not every draft generated along the way.
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Generation failed');
     } finally {
@@ -242,20 +250,6 @@ export default function CreateWizard() {
     }
   };
 
-  const updateLibraryRecord = async (updates: Partial<GeneratedContent>) => {
-    if (!savedRowId || !content) return;
-    try {
-      await api('/api/library', {
-        productId,
-        audience: audienceIds.join(', '),
-        content: { ...content, ...updates },
-        existingProductRowId: savedRowId,
-      });
-    } catch {
-      // best-effort only
-    }
-  };
-
   const downloadPdf = async () => {
     setBusy('Rendering your PDF…');
     setError(null);
@@ -263,7 +257,7 @@ export default function CreateWizard() {
       const res = await fetch('/api/render/pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, audiences: audienceIds, productId, format: 'pdf' }),
+        body: JSON.stringify({ content, audiences: audienceIds, productId, format: 'pdf', pageLength }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? 'Render failed');
       const blob = await res.blob();
@@ -271,7 +265,7 @@ export default function CreateWizard() {
       a.href = URL.createObjectURL(blob);
       a.download = `${content?.title ?? 'product'}.pdf`;
       a.click();
-      if (content) updateLibraryRecord(content);
+      if (content) await saveToLibrary(content);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Render failed');
     } finally {
@@ -288,10 +282,11 @@ export default function CreateWizard() {
         audiences: audienceIds,
         productId,
         format: 'drive',
+        pageLength,
       });
       setPdfDriveUrl(data.driveUrl);
       if (data.driveUrl) window.open(data.driveUrl, '_blank');
-      if (content) updateLibraryRecord(content);
+      if (content) await saveToLibrary(content);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Drive export failed');
     } finally {
@@ -323,7 +318,7 @@ export default function CreateWizard() {
     const res = await fetch('/api/render/pdf', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content, audiences: audienceIds, productId, format: 'html' }),
+      body: JSON.stringify({ content, audiences: audienceIds, productId, format: 'html', pageLength }),
     });
     const html = await res.text();
     const w = window.open('', '_blank');
@@ -485,6 +480,42 @@ export default function CreateWizard() {
               ))}
             </div>
           </div>
+          {(() => {
+            const selectedProduct = PRODUCTS.find((p) => p.id === productId);
+            return selectedProduct?.pageLengthOptions ? (
+              <div>
+                <h2 className="font-bold text-base mb-2">Page length</h2>
+                <p className="text-xs text-lightslate mb-2">
+                  Keep it to 1 or 2 A4 pages — anything longer suits the e-book format instead.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setPageLength(null)}
+                    className={`rounded-full px-4 py-1.5 text-sm border ${
+                      pageLength === null
+                        ? 'border-sage bg-sage/15 text-ink font-semibold'
+                        : 'border-cardborder text-slate hover:border-sage/50'
+                    }`}
+                  >
+                    Default
+                  </button>
+                  {selectedProduct.pageLengthOptions.map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setPageLength(n)}
+                      className={`rounded-full px-4 py-1.5 text-sm border ${
+                        pageLength === n
+                          ? 'border-sage bg-sage/15 text-ink font-semibold'
+                          : 'border-cardborder text-slate hover:border-sage/50'
+                      }`}
+                    >
+                      {n} page{n > 1 ? 's' : ''}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null;
+          })()}
           <input
             value={notes}
             onChange={(e) => setNotes(e.target.value)}

@@ -47,7 +47,7 @@ function imageCountForBrief(brief: string): number {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { brief, productId, notes = '' } = body;
+    const { brief, productId, notes = '', pageLength } = body;
     const audienceIds: string[] =
       body.audiences ?? (body.audience ? [body.audience] : ['general']);
     const product = getProduct(productId);
@@ -64,11 +64,24 @@ export async function POST(req: NextRequest) {
       '',
       `PRODUCT TYPE: ${product.label} (${product.description})`,
       `ANATOMY (follow exactly): ${product.anatomy}`,
-      product.pages ? `LENGTH: ${product.pages} pages.` : '',
+      pageLength && product.pageLengthOptions?.includes(pageLength)
+        ? `LENGTH: strictly ${pageLength} A4 page${pageLength > 1 ? 's' : ''} — write only as much content as comfortably fits, no more.`
+        : product.pages
+          ? `LENGTH: ${product.pages} pages.`
+          : '',
       audienceIds.includes('children')
-        ? `AUDIENCE: ${audienceLabel} — write for a developmental age of 3–12. Use short, ` +
+        ? `AUDIENCE: ${audienceLabel} — write for a developmental age of 3–12. Use very short, ` +
           'simple sentences, everyday concrete words, and literal explanations (no idioms, ' +
-          'sarcasm, or abstract metaphors a literal thinker might misread). Warm and playful tone.'
+          'sarcasm, or abstract metaphors a literal thinker might misread). Warm, gentle, ' +
+          'unassuming, playful tone — never clinical or instructional-sounding. ' +
+          'Speak in universal, normalising terms ("everyone", "some people", "our bodies") ' +
+          'rather than singling the child out as different. Never frame grown-ups/adults as ' +
+          'at fault, careless, or needing correction — do not tell the child what adults ' +
+          '"should" do. Never use clinical or loaded terms a child would not use themselves ' +
+          '(e.g. "mask", "non-contingent", "proactively", "accommodation") — describe the ' +
+          'same idea in plain, concrete, everyday words instead. Avoid direct commands or ' +
+          '"you should/must" statements; invite and reassure instead ("it is OK to...", ' +
+          '"you do not have to..."). End on warmth and reassurance, not an instruction.'
         : audienceIds.includes('general') || audienceIds.length > 1
           ? `AUDIENCE: ${audienceLabel} — write in a register that is clear and welcoming to all of these readers at once (avoid jargon specific to only one group).`
           : `AUDIENCE: ${audienceLabel} — use that register.`,

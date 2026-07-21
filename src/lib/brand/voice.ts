@@ -30,6 +30,10 @@ LANGUAGE RULES:
 - NEVER "meltdown" — use "overwhelm", "sensory overload", "distress".
 - Never imply wilful misbehaviour. Frame accommodations as proactive and non-contingent.
 - No "transform overnight" / silver-bullet claims. No pure black, no harsh red in any design spec.
+- Avoid absolutes about what will happen or what someone will feel. Prefer "may help" /
+  "can support" / "often" over "will help" / "guarantees" / "always". Every autistic
+  person's experience is individual — claims should leave room for that, not overpromise
+  or generalise.
 
 FORMATTING: headings sentence case, ≤60 chars, no trailing period. Sentences 15–20 words,
 paragraphs 2–3 sentences, active voice, no jargon. CTAs 1–3 action words, no punctuation.
@@ -58,4 +62,6 @@ Before returning, verify:
 4. Headings/sentences follow the formatting rules.
 5. British/Australian spelling throughout — no American spelling ("color", "organize", etc.).
 6. A clear CTA is present and phrased as 1–3 action words.
+7. No absolute claims ("will help", "always", "guarantees") — use "may help" / "can support" /
+   "often" instead.
 `.trim();

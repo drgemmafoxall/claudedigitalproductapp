@@ -13,12 +13,17 @@ interface LibraryProduct {
   file_url: string | null;
   created_at: string;
   updated_at: string;
+  projects?: {
+    raw_input: string | null;
+    source_briefs?: { brief: string }[] | null;
+  } | null;
 }
 
 export default function Library() {
   const [products, setProducts] = useState<LibraryProduct[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/library')
@@ -92,27 +97,64 @@ export default function Library() {
         <div className="grid gap-3">
           {products.map((p) => {
             const def = getProduct(p.product_id);
+            const brief = p.projects?.source_briefs?.[0]?.brief;
+            const rawInput = p.projects?.raw_input;
+            const hasSource = Boolean(brief || rawInput);
+            const isExpanded = expandedId === p.id;
             return (
-              <div
-                key={p.id}
-                className="rounded-xl border border-cardborder bg-card p-4 flex items-center justify-between gap-4"
-              >
-                <div className="min-w-0">
-                  <div className="font-heading font-bold text-ink truncate">
-                    {p.content?.title ?? 'Untitled'}
+              <div key={p.id} className="rounded-xl border border-cardborder bg-card p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="font-heading font-bold text-ink truncate">
+                      {p.content?.title ?? 'Untitled'}
+                    </div>
+                    <div className="text-xs text-lightslate mt-0.5">
+                      {def?.label ?? p.product_id} · {p.audience || 'General'} ·{' '}
+                      {new Date(p.created_at).toLocaleDateString()}
+                    </div>
                   </div>
-                  <div className="text-xs text-lightslate mt-0.5">
-                    {def?.label ?? p.product_id} · {p.audience || 'General'} ·{' '}
-                    {new Date(p.created_at).toLocaleDateString()}
+                  <div className="flex gap-2 shrink-0">
+                    {hasSource && (
+                      <button
+                        onClick={() => setExpandedId(isExpanded ? null : p.id)}
+                        className="rounded-full border border-cardborder px-4 py-1.5 text-sm font-medium text-slate hover:border-sage/50"
+                      >
+                        {isExpanded ? 'Hide source' : 'View source'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => download(p)}
+                      disabled={busyId === p.id}
+                      className="rounded-full border border-sage px-4 py-1.5 text-sm font-medium text-ink hover:bg-sage/10 disabled:opacity-40"
+                    >
+                      {busyId === p.id ? 'Rendering…' : 'Download PDF'}
+                    </button>
                   </div>
                 </div>
-                <button
-                  onClick={() => download(p)}
-                  disabled={busyId === p.id}
-                  className="shrink-0 rounded-full border border-sage px-4 py-1.5 text-sm font-medium text-ink hover:bg-sage/10 disabled:opacity-40"
-                >
-                  {busyId === p.id ? 'Rendering…' : 'Download PDF'}
-                </button>
+                {isExpanded && (
+                  <div className="mt-3 space-y-2 border-t border-cardborder pt-3">
+                    {rawInput && (
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-lightslate mb-1">
+                          Original input
+                        </div>
+                        <pre className="text-xs whitespace-pre-wrap rounded-lg bg-cream p-3 max-h-48 overflow-auto">
+                          {rawInput}
+                        </pre>
+                      </div>
+                    )}
+                    {brief && (
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-lightslate mb-1">
+                          Source brief
+                        </div>
+                        <pre className="text-xs whitespace-pre-wrap rounded-lg bg-cream p-3 max-h-48 overflow-auto">
+                          {brief}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

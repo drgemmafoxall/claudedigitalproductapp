@@ -11,7 +11,10 @@ export async function GET() {
   try {
     const { data, error } = await supabaseAdmin()
       .from('products')
-      .select('id, project_id, product_id, audience, content, status, file_url, created_at, updated_at')
+      .select(
+        'id, project_id, product_id, audience, content, status, file_url, created_at, updated_at, ' +
+          'projects(raw_input, source_briefs(brief))',
+      )
       .order('created_at', { ascending: false })
       .limit(100);
     if (error) throw error;

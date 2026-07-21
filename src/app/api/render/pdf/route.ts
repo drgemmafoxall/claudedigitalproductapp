@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
       html: providedHtml,
       format = 'pdf',
       kind = 'document',
+      pageLength,
     } = await req.json();
     const audienceLabel = audienceLabelFor(audienceIds ?? (audience ? [audience] : []));
     const product = productId ? getProduct(productId) : undefined;
@@ -63,11 +64,19 @@ export async function POST(req: NextRequest) {
       await page.evaluateHandle('document.fonts.ready');
 
       // Single-page-by-design document outputs (pages === '1', e.g. one-pager,
-      // infographic) must fit on exactly one A4 sheet — shrink content proportionally
-      // if it slightly overflows. Multi-page-by-design types (workbook, resource-guide,
-      // etc.) are left alone since they're meant to span several pages.
-      if (kind === 'document' && product?.pages === '1') {
-        const A4_HEIGHT_PX = 1123; // 297mm at 96dpi
+      // infographic) — or any product where Gemma has explicitly chosen a target
+      // page count via pageLengthOptions — must fit on exactly that many A4 sheets.
+      // Shrink content proportionally if it slightly overflows. Multi-page-by-design
+      // types (workbook, resource-guide, etc.) are left alone since they're meant
+      // to span several pages and have no pageLengthOptions.
+      const targetPages =
+        pageLength && product?.pageLengthOptions?.includes(pageLength)
+          ? pageLength
+          : product?.pages === '1'
+            ? 1
+            : null;
+      if (kind === 'document' && targetPages) {
+        const A4_HEIGHT_PX = 1123 * targetPages; // 297mm at 96dpi, per target page
         const contentHeight = await page.evaluate(() => {
           const el = document.querySelector('.page');
           return el ? el.scrollHeight : 0;
