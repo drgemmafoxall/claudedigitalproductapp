@@ -25,9 +25,7 @@ interface GeneratedContent {
 
 interface ImageSetItem {
   subject: string;
-  dataUrl: string;
-  publicUrl?: string | null;
-  driveUrl?: string | null;
+  prompt: string;
   selected: boolean;
 }
 
@@ -153,7 +151,7 @@ export default function CreateWizard() {
       setContent(data.content);
       setStep('review');
       if (data.content?.images?.length) {
-        generateImageSetPreview(data.content.images);
+        buildImageSetPrompts(data.content.images);
       }
       // Note: we deliberately don't save to the Library here — only once Gemma
       // downloads or exports the PDF (see downloadPdf / exportPdfToDrive), so the
@@ -165,34 +163,27 @@ export default function CreateWizard() {
     }
   };
 
-  /** Renders every subject in an image-set as a preview (no Drive upload yet). */
-  const generateImageSetPreview = async (images: { subject: string }[]) => {
-    setImageSet(images.map((im) => ({ subject: im.subject, dataUrl: '', selected: true })));
-    for (let i = 0; i < images.length; i++) {
-      setBusy(`Generating illustration ${i + 1} of ${images.length}…`);
-      try {
-        const data = await api('/api/images/generate', {
-          subject: images[i].subject,
-          format: productId.includes('story') ? 'story' : 'square',
-          audience: audienceIds.join(', '),
-          pushToDrive: false,
-        });
-        setImageSet((prev) =>
-          prev
-            ? prev.map((item, idx) =>
-                idx === i
-                  ? { ...item, dataUrl: data.publicUrl ?? data.dataUrl, publicUrl: data.publicUrl }
-                  : item,
-              )
-            : prev,
-        );
-      } catch (e) {
-        setImageSetNotice(
-          `Image ${i + 1} failed to generate (${e instanceof Error ? e.message : 'unknown error'}) — the rest continued.`,
-        );
-      }
+  /** Builds ready-to-paste Nano Banana prompts for every subject (no image generation, no API cost). */
+  const buildImageSetPrompts = async (images: { subject: string }[]) => {
+    setBusy('Preparing your prompts…');
+    try {
+      const data = await api('/api/images/prompts', {
+        images,
+        format: productId.includes('story') ? 'story' : 'square',
+        audience: audienceIds.join(', '),
+      });
+      setImageSet(
+        data.prompts.map((p: { subject: string; prompt: string }) => ({
+          subject: p.subject,
+          prompt: p.prompt,
+          selected: true,
+        })),
+      );
+    } catch (e) {
+      setImageSetNotice(`Could not build prompts: ${e instanceof Error ? e.message : 'unknown error'}`);
+    } finally {
+      setBusy(null);
     }
-    setBusy(null);
   };
 
   const toggleImageSelected = (i: number) => {
@@ -201,32 +192,24 @@ export default function CreateWizard() {
     );
   };
 
-  const saveSelectedImagesToDrive = async () => {
-    if (!imageSet) return;
-    setBusy('Saving selected images to Drive…');
-    setError(null);
+  const copyPrompt = async (prompt: string) => {
     try {
-      const updated = [...imageSet];
-      for (let i = 0; i < updated.length; i++) {
-        const item = updated[i];
-        if (!item.selected || item.driveUrl || !item.dataUrl?.startsWith('data:')) continue;
-        try {
-          const data = await api('/api/images/save-to-drive', { dataUrl: item.dataUrl, subject: item.subject });
-          updated[i] = { ...item, driveUrl: data.driveUrl };
-        } catch (e) {
-          setImageSetNotice(`Could not save "${item.subject}" to Drive: ${e instanceof Error ? e.message : 'error'}`);
-        }
-      }
-      setImageSet(updated);
-      const savedCount = updated.filter((i) => i.selected).length;
-      setImageSetNotice(`Saved ${savedCount} selected image${savedCount === 1 ? '' : 's'} to your Drive folder.`);
-      if (content) {
-        await saveToLibrary({ ...content, images: updated as unknown as { subject: string }[] });
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Drive save failed');
-    } finally {
-      setBusy(null);
+      await navigator.clipboard.writeText(prompt);
+      setImageSetNotice('Prompt copied — paste it into Gemini/Nano Banana.');
+    } catch {
+      setImageSetNotice('Could not copy automatically — select and copy the prompt text manually.');
+    }
+  };
+
+  const copyAllSelectedPrompts = async () => {
+    if (!imageSet) return;
+    const selected = imageSet.filter((i) => i.selected);
+    const text = selected.map((i, idx) => `${idx + 1}. ${i.subject}\n${i.prompt}`).join('\n\n---\n\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      setImageSetNotice(`Copied ${selected.length} prompt${selected.length === 1 ? '' : 's'} to your clipboard.`);
+    } catch {
+      setImageSetNotice('Could not copy automatically — copy each prompt individually instead.');
     }
   };
 
@@ -541,47 +524,40 @@ export default function CreateWizard() {
         <section className="rounded-2xl bg-card border border-cardborder p-6 space-y-4">
           <h1 className="text-2xl font-extrabold">{content.title}</h1>
           <p className="text-sm">
-            {imageSet?.length ?? content.images.length} illustrations generated from your content.
-            Untick any you don't want, then save the rest straight to your Drive folder.
+            {imageSet?.length ?? content.images.length} ready-to-paste Nano Banana prompts, built
+            from your content. Untick any you don't want, then copy them into your Gemini Pro / AI
+            Studio account — one prompt per image. Download each result and add it to your
+            Canva Bulk Create sheet (see the Google Sheet + Apps Script setup for pulling the
+            downloaded images into fetchable URLs automatically).
           </p>
           {imageSetNotice && <div className="text-xs text-lightslate">{imageSetNotice}</div>}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className="space-y-3">
             {(imageSet ?? []).map((img, i) => (
-              <label
+              <div
                 key={i}
-                className={`rounded-xl border-2 overflow-hidden cursor-pointer ${
+                className={`rounded-xl border-2 p-3 ${
                   img.selected ? 'border-sage' : 'border-cardborder opacity-50'
                 }`}
               >
-                <div className="aspect-square bg-cream flex items-center justify-center">
-                  {img.dataUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={img.dataUrl} alt={img.subject} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-xs text-lightslate animate-pulse">Generating…</span>
-                  )}
-                </div>
-                <div className="p-2 flex items-start gap-2">
+                <label className="flex items-start gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={img.selected}
                     onChange={() => toggleImageSelected(i)}
-                    className="mt-0.5"
+                    className="mt-1"
                   />
-                  <span className="text-xs text-slate">{img.subject}</span>
-                </div>
-                {img.driveUrl && (
-                  <a
-                    href={img.driveUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="block px-2 pb-2 text-xs text-sage underline"
-                  >
-                    Saved to Drive →
-                  </a>
-                )}
-              </label>
+                  <span className="text-sm font-semibold text-ink">{img.subject}</span>
+                </label>
+                <pre className="mt-2 text-xs whitespace-pre-wrap rounded-lg bg-cream p-3 max-h-40 overflow-auto">
+                  {img.prompt}
+                </pre>
+                <button
+                  onClick={() => copyPrompt(img.prompt)}
+                  className="mt-2 rounded-full border border-sage px-4 py-1 text-xs font-medium text-ink hover:bg-sage/10"
+                >
+                  Copy this prompt
+                </button>
+              </div>
             ))}
           </div>
           <div className="flex justify-between items-center pt-2">
@@ -589,11 +565,11 @@ export default function CreateWizard() {
               Back
             </button>
             <button
-              onClick={saveSelectedImagesToDrive}
-              disabled={!!busy || !imageSet?.some((i) => i.selected && i.dataUrl)}
+              onClick={copyAllSelectedPrompts}
+              disabled={!imageSet?.some((i) => i.selected)}
               className="rounded-full bg-cta text-ink font-heading font-bold px-6 py-2 disabled:opacity-40"
             >
-              Save selected to Drive
+              Copy all selected prompts
             </button>
           </div>
         </section>

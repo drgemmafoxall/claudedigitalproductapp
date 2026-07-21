@@ -12,7 +12,7 @@ export type Renderer =
   | 'vizard-clips' // Vizard API: audio/video → captioned social clips
   | 'prompt-kit-suno' // ready-to-paste Suno prompt package
   | 'prompt-kit-magiclight' // ready-to-paste MagicLight scene package
-  | 'image-set'; // Gemini illustrations, generated as a reviewable batch → selective Drive save
+  | 'image-set'; // Batch of ready-to-paste Nano Banana/Gemini prompts (no image-gen API call)
 
 export type ModelTier = 'haiku' | 'sonnet' | 'top';
 
@@ -211,12 +211,12 @@ export const PRODUCTS: ProductDef[] = [
   },
   {
     id: 'image-set',
-    label: 'Image set (illustrations for Canva)',
+    label: 'Image prompt set (paste into Nano Banana / Canva)',
     group: 'social',
     renderer: 'image-set',
     tier: 'sonnet',
     description:
-      'A batch of brand-safe illustrations generated from your content, previewed together — pick which ones to keep and save to Drive',
+      'A batch of ready-to-paste Nano Banana/Gemini prompts built from your content — no image-generation cost. Paste each into your Gemini Pro account, then feed the results into Canva Bulk Create.',
     anatomy:
       'A set of distinct image subjects (one-sentence plain-language scene descriptions, no text-in-image, no real people) that together illustrate the source material — varied scenes/metaphors, no duplicates. Count scales with how much source material there is.',
   },
